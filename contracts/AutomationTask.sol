@@ -35,6 +35,9 @@ contract AutomationTask is AutomationCompatible {
         interval = _interval;
         
         //在此添加 solidity 代码
+        for(uint256 i = 0; i < SIZE; i++) {
+            healthPoint[i] = MAXIMUM_HEALTH;
+        }
     }
 
     /*
@@ -43,6 +46,7 @@ contract AutomationTask is AutomationCompatible {
      */
     function fight(uint256 fighter) public {
         //在此添加 solidity 代码
+        healthPoint[fighter] -= 100;
     }
 
     /* 
@@ -62,12 +66,35 @@ contract AutomationTask is AutomationCompatible {
         override 
         returns (
             bool upkeepNeeded,
-            bytes memory /*performData*/
+            bytes memory performData
         )
     {
         //在此添加和修改 solidity 代码
-        upkeepNeeded = true;
+        uint256 count = 0;
+        for(uint256 i = 0; i < SIZE; i++){
+            if(healthPoint[i] < MAXIMUM_HEALTH && block.timestamp - lastTimeStamp > interval) {
+              count++;
+            }
+        }
+         uint256[] memory indexToUp = new uint256[](count);
+
+        uint256 upIndex = 0;
+
+        for(uint256 i = 0; i < SIZE; i++){
+            if (healthPoint[i] < MAXIMUM_HEALTH && block.timestamp - lastTimeStamp > interval) {
+                indexToUp[upIndex] = i;
+                upIndex++;
+            }
+        }
         
+        if (indexToUp.length > 0) {
+            upkeepNeeded = true;
+        }else{
+            upkeepNeeded = false;
+        }
+
+        performData = abi.encode(indexToUp);
+        return (upkeepNeeded, performData);
     }
 
     /* 
@@ -78,11 +105,15 @@ contract AutomationTask is AutomationCompatible {
      * 可以通过 performData 使用 checkUpkeep 的运算结果，减少 gas 费用
      */
     function performUpkeep(
-        bytes memory /*performData*/
+        bytes memory performData
     ) 
         external 
         override 
     {
         //在此添加 solidity 代码
+        uint256[] memory indexToUp = abi.decode(performData,(uint256[]));
+        for(uint256 i = 0; i < indexToUp.length; i++){
+            healthPoint[indexToUp[i]] = MAXIMUM_HEALTH;
+        }
     }
 }
